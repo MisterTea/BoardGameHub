@@ -1,0 +1,21 @@
+{
+  "name": "TidalWave",
+  "version": "0.0.0",
+  "homepage": "https://github.com/MisterTea/TidalWave",
+  "authors": [
+    "Jason Gauci <jgmath2000@gmail.com>"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "ace": "~1.1.1",
+    "marked": "~0.3.1"
+  }
+}

@@ -1,0 +1,149 @@
+apply plugin: 'java'
+apply plugin: 'scala'
+apply plugin: 'maven'
+apply plugin: 'eclipse'
+
+group = 'com.github.mistertea'
+version = '0.0.1-SNAPSHOT'
+
+description = """Board Game Hub"""
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+eclipse {
+  classpath { downloadSources=true }
+}
+
+buildscript {
+  repositories { mavenCentral(); }
+  dependencies { classpath 'com.github.iamsteveholmes:scrooge-gradle-plugin:0.5' }
+}
+
+apply plugin: 'scrooge-gradle-plugin'
+
+compileScrooge {
+  delete "src/gen/scala"
+  thriftFiles = fileTree(dir: "src/main/thrift", include: "**/*.thrift")
+  dest = file("src/gen/scala")
+  opts = ["--finagle"]
+}
+
+task generateThrift << {
+  new File("src/gen").mkdirs()
+  delete "src/gen/gen-java"
+  ext.thriftFiles = fileTree(dir: 'src/main/thrift').matching { include '**/*.thrift' }
+  for(String thriftFile : ext.thriftFiles) {
+    exec {
+      executable = 'thrift'
+      args = [
+        '--gen',
+        'java',
+        '-o',
+        'src/gen/',
+        thriftFile
+      ]
+    }
+  }
+}
+
+compileJava {
+  it.dependsOn generateThrift
+  it.dependsOn compileScrooge
+}
+compileScala {
+  it.dependsOn generateThrift
+  it.dependsOn compileScrooge
+}
+eclipseProject {
+  it.dependsOn generateThrift
+  it.dependsOn compileScrooge
+}
+
+sourceSets {
+  main {
+    java {
+      srcDir 'src/main/java'
+      srcDir 'src/gen/gen-java'
+    }
+    resources { srcDir 'src/resources' }
+    scala {
+      srcDir 'src/main/java'
+      srcDir 'src/gen/scala'
+    }
+  }
+}
+
+repositories {
+  maven { url "http://clojars.org/repo" }
+  maven { url "http://conjars.org/repo" }
+  maven { url "http://repo.akka.io/releases" }
+  maven { url "http://scala-tools.org/repo-releases" }
+  maven { url "http://repo.maven.apache.org/maven2" }
+  mavenLocal()
+}
+
+dependencies {
+  compile group: 'junit', name: 'junit', version:'4.8.2'
+  compile group: 'junit', name: 'junit-dep', version:'4.8.2'
+
+  // HTTP Components
+  compile group: 'org.apache.httpcomponents', name: 'httpclient', version:'4.3'
+
+  // Logging
+  compile group: 'org.slf4j', name: 'slf4j-api', version:'1.6.6'
+  compile group: 'org.slf4j', name: 'slf4j-log4j12', version:'1.6.6'
+  compile group: 'log4j', name: 'log4j', version:'1.2.16'
+
+  // Apache Commons
+  compile group: 'commons-io', name: 'commons-io', version:'2.4'
+  compile group: 'commons-codec', name: 'commons-codec', version:'1.8'
+  compile group: 'net.sourceforge.collections', name: 'collections-generic', version:'4.01'
+  compile 'commons-cli:commons-cli:1.2'
+  compile 'org.apache.commons:commons-collections4:4.0'
+
+  // Apache Thrift
+  compile group: 'org.apache.thrift', name: 'libthrift', version:'0.9.1'
+
+  // Scala compiler + related tools, and standard library
+  compile 'org.scala-lang:scala-library:2.10.3'
+
+  // Twitter utils (needed for Scrooge and Finagle)
+  compile 'com.twitter:util-core_2.10:6.12.1'
+  
+  // Scrooge
+  compile 'com.twitter:scrooge-core_2.10:3.12.2'
+  compile 'com.twitter:scrooge-runtime_2.10:3.12.2'
+  
+  // Finagle (RPC Framework)
+  compile 'com.twitter:finagle-core_2.10:6.12.2'
+  compile 'com.twitter:finagle-thrift_2.10:6.12.2'
+  
+  // Joda Time
+  compile 'joda-time:joda-time:2.3'
+
+  compile group: 'org.jsoup', name: 'jsoup', version:'1.7.2'
+  compile group: 'com.google.code.gson', name: 'gson', version:'2.2.4'
+  compile group: 'net.htmlparser.jericho', name: 'jericho-html', version:'3.1'
+  compile group: 'org.apache.lucene', name: 'lucene-core', version:'4.5.1'
+  compile group: 'org.apache.lucene', name: 'lucene-analyzers-common', version:'4.5.1'
+}
+
+// Speed up scala compiling by using sbt
+tasks.withType(ScalaCompile) {
+  scalaCompileOptions.useAnt = false
+}
+
+// Speed up scala compiling by using zinc
+tasks.withType(ScalaCompile) { scalaCompileOptions.useAnt = false }
+
+// Build jar with dependencies
+jar {
+    from(configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }) {
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
+    }
+    zip64 = true
+}
+
